@@ -1,0 +1,132 @@
+name: Generate Lattice STL
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-generate:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout repo with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            libgmp-dev \
+            libmpfr-dev \
+            libcgal-dev \
+            libeigen3-dev \
+            libsuitesparse-dev \
+            libboost-all-dev \
+            libtbb-dev \
+            gdb \
+            python3 \
+            python3-pip
+
+      - name: Fix CMake minimum version requirements
+        working-directory: microstructure/microstructure_inflators
+        run: |
+          find . -name "CMakeLists.txt" -exec sed -i \
+            's/cmake_minimum_required(VERSION 3\.[1234])/cmake_minimum_required(VERSION 3.10)/g' {} \;
+
+      - name: Configure CMake
+        working-directory: microstructure/microstructure_inflators
+        run: |
+          mkdir -p build && cd build
+          cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.1 \
+            -DCMAKE_POLICY_DEFAULT_CMP0074=NEW \
+            -DCMAKE_POLICY_DEFAULT_CMP0135=NEW \
+            -DBoost_NO_SYSTEM_PATHS=OFF \
+            -DMICRO_WITH_TBB=ON \
+            ..
+
+      - name: Build cut_cells_cli
+        working-directory: microstructure/microstructure_inflators/build
+        run: |
+          make -j$(nproc) cut_cells_cli stitch_cells_cli stack_cells
+          echo "--- Binary size ---"
+          ls -lh isosurface_inflator/cut_cells_cli
+
+      - name: Diagnose shared library linkage
+        working-directory: microstructure/microstructure_inflators
+        run: |
+          BIN=build/isosurface_inflator/cut_cells_cli
+          echo "=== ldd output ==="
+          ldd "$BIN" || true
+          echo ""
+          echo "=== Searching for libtbb in build tree ==="
+          find build 3rdparty -name "libtbb*.so*" 2>/dev/null || true
+          echo ""
+          TBB_SO=$(find build 3rdparty -name "libtbb.so*" 2>/dev/null | head -1)
+          if [ -n "$TBB_SO" ]; then
+            TBB_LIB_DIR=$(dirname "$TBB_SO")
+            echo "Found TBB at: $TBB_LIB_DIR"
+            echo "TBB_LIB_DIR=$TBB_LIB_DIR" >> "$GITHUB_ENV"
+          else
+            echo "No custom TBB found; using system TBB"
+            echo "TBB_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> "$GITHUB_ENV"
+          fi
+
+      - name: Smoke-test binary (--help)
+        working-directory: microstructure/microstructure_inflators
+        run: |
+          export LD_LIBRARY_PATH="${TBB_LIB_DIR}:${LD_LIBRARY_PATH:-}"
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+          ./build/isosurface_inflator/cut_cells_cli --help || true
+
+      - name: Install Python dependencies
+        run: pip3 install meshio trimesh manifold3d numpy scipy
+
+      - name: Create output directory
+        run: mkdir -p output
+
+      - name: Run cut-cell pipeline (lattice + solid magnet-pocket plugs + base)
+        env:
+          LD_LIBRARY_PATH: ${{ env.TBB_LIB_DIR }}
+        run: |
+          export LD_LIBRARY_PATH="${TBB_LIB_DIR}:${LD_LIBRARY_PATH:-}"
+          echo "Running with LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+          python3 generate_lattice_v10_5.py
+
+      - name: Verify output STL
+        run: |
+          python3 - <<'EOF'
+          import trimesh, numpy as np
+          m = trimesh.load("output/lattice_v10_5.stl")
+          print(f"Triangles:   {len(m.faces)}")
+          print(f"Watertight:  {m.is_watertight}")
+          ext = m.bounding_box.extents
+          print(f"BBox:        {ext}")
+          # Loose tolerance around the nominal 30x30x14mm (1mm base + 13mm lattice) part.
+          assert ext[0] <= 32 and ext[1] <= 32 and ext[2] <= 16, f"BBox too large: {ext}"
+          assert ext[0] >= 28 and ext[1] >= 28 and ext[2] >= 13, f"BBox too small: {ext}"
+          print("Bounding box check passed.")
+          EOF
+
+      - name: Upload forearm lattice STL as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: forearm-lattice-stl
+          path: output/lattice_v10_5.stl
+          retention-days: 30
+
+      - name: Commit updated scripts and STL to fork branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b generated-lattice-stl || git checkout generated-lattice-stl
+          git add output/lattice_v10_5.stl generate_lattice_v10_5.py
+          git commit -m "ci: forearm lattice 30x30x14mm cell8 4 solid-plug pouches [skip ci]" || echo "Nothing to commit"
+          git push --force origin generated-lattice-stl || echo "Push failed (token may lack write access)"

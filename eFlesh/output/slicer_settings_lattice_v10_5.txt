@@ -1,0 +1,38 @@
+=== ORCASLICER SETTINGS FOR EFLESH FOREARM PAD v10.5 (0.8mm magnet floor for a clean seat, still ~+10% vs v9.1) ===
+File: lattice_v10_5.stl
+Geometry: 30.0 x 30.0 x 13.98mm  (1mm base + 13mm lattice)
+
+Material: TPU 95A
+Nozzle: 0.4mm
+Layer height: 0.2mm
+First layer height: 0.25mm
+Print speed: 20mm/s
+Bed temperature: 45C / Nozzle: 220-230C
+Brim: 10mm / Supports: None / Retraction: 0.5-1mm
+
+PAUSE AT LAYER: 37  (printed Z = 7.45mm)
+  Pocket opens at Z = 7.5mm
+
+*** v10.5 POCKET-FLOOR (0.6mm still gave a rough seat -> now 0.8mm) ***
+  The magnet floor is now 0.8mm (4 layers) AND the pocket clearance no longer
+  cuts away the lattice under the floor, so the floor bridges over supported
+  lattice with enough recovery layers for a flat magnet seat. If a magnet
+  STILL will not seat fully, use v9.1's proven 1.0mm floor (generate_lattice_v9_1).
+  To be safe on the bridge layers (floor prints at Z ~= 5.00-5.80mm):
+    - Slow those layers to ~10mm/s (Bridge speed) and set Bridge flow ~1.05
+    - Max part cooling fan on the floor + cavity-wall layers
+    - Enable "Avoid crossing walls/perimeters" and wipe-on-retract so the
+      nozzle does not ooze/string across the open cavity mouth
+  INSPECT the 4 pocket floors at the pause layer before inserting magnets.
+  If any floor still sags: raise PLUG_FLOOR_MARGIN to 0.8 (4 layers) and
+  regenerate -- do NOT go back below 0.6.
+
+MAGNET INSERTION (UNCHANGED from v9.1):
+  4 x N52, 4.8mm dia x 1.6mm thick
+  Pocket bore: 5.3mm dia (+0.5mm clearance over magnet dia)
+  Centers (row-major: low-Y row left-to-right, then high-Y row left-to-right):
+  1. X=9.0mm, Y=9.0mm
+  2. X=21.0mm, Y=9.0mm
+  3. X=9.0mm, Y=21.0mm
+  4. X=21.0mm, Y=21.0mm
+  Polarity in pocket order: N S N S
