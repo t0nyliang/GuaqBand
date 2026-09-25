@@ -37,14 +37,29 @@ The implementation has three main files:
 
 ## Setup
 
-Upload `..\mlx90393_live\mlx90393_live.ino` and close Arduino Serial Monitor.
-Then install the two runtime dependencies:
+Upload `..\mlx90393_live\mlx90393_live.ino` in Arduino IDE, then close Arduino
+Serial Monitor and Serial Plotter. The combined BNO085 firmware also works
+because it emits the same `FRAME` packets. Only one program can use the serial
+port at a time.
+
+Install the runtime dependencies from this directory:
 
 ```powershell
-cd C:\Cody\FingerMovementDetectionArmband\calibration_pipeline
+cd .\calibration_pipeline
 python -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
+
+Find the ESP32 port before running a command:
+
+```powershell
+.\.venv\Scripts\python.exe -m serial.tools.list_ports -v
+```
+
+On Windows, it is usually the `COM` number displayed in Arduino IDE under
+**Tools > Port** or in Device Manager under **Ports (COM & LPT)**. On macOS it
+is typically `/dev/cu.usbserial-*`; on Linux it is usually `/dev/ttyUSB0` or
+`/dev/ttyACM0`. Replace `COM3` below with that value.
 
 ## Calibrate
 
@@ -64,6 +79,10 @@ two-second recording. The program prints
 are excluded from training windows, leaving one second for the complete
 movement and held position and making the capture less sensitive to movement
 timing. Calibration always saves after all 40 recordings.
+
+At `GO`, remain relaxed for `rest`; for the other gestures, make the indicated
+movement and hold its final position until `captured` is printed. Re-run the
+full calibration when the wearer, armband fit, or sensor placement changes.
 
 ## Recalibrate one gesture
 
@@ -90,6 +109,19 @@ normalized predictions once per physical sensor frame. Each prediction uses a
 timestamp-resampled 360 ms history, so slower hardware does not stretch the
 detector window. A label must win two consecutive predictions before it is
 published. `ONSET` is printed when a new stable non-rest gesture appears.
+
+## Desktop monitoring dashboard
+
+Use the monitor command to view the existing detector in a desktop window
+instead of the terminal:
+
+```powershell
+.\.venv\Scripts\python.exe -m eflesh_calibration monitor --port COM3
+```
+
+It shows the stabilized live label and a bar for each gesture. The bars are the
+existing KNN class-proximity display scores normalized to 100%, so they are
+useful for comparing relative confidence but are not calibrated probabilities.
 
 Profiles from the older pipeline are intentionally unsupported. Run calibration
 again if the profile format error appears.

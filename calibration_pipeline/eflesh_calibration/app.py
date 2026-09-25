@@ -345,6 +345,7 @@ def build_parser() -> argparse.ArgumentParser:
     for name, help_text in (
         ("calibrate", "capture examples and save a model"),
         ("live", "classify a timestamp-resampled rolling window"),
+        ("monitor", "open a desktop dashboard for live classification"),
     ):
         command = commands.add_parser(name, help=help_text)
         command.add_argument("--port", required=True, help="ESP32 port, such as COM3")
@@ -366,6 +367,12 @@ def main(argv: list[str] | None = None) -> int:
             calibrate(args.port, args.profile)
         elif args.command == "recalibrate":
             recalibrate(args.port, args.profile, args.gesture)
+        elif args.command == "monitor":
+            # Imported only for the UI command so CLI calibration remains
+            # usable on systems without a desktop display.
+            from .monitor import monitor
+
+            monitor(args.port, args.profile)
         else:
             live(args.port, args.profile)
         return 0
