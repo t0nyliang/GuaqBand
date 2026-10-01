@@ -39,9 +39,16 @@ jobs:
             libeigen3-dev \
             libsuitesparse-dev \
             libboost-all-dev \
-            libtbb-dev \
             python3 \
             python3-pip
+          # Deliberately NOT libtbb-dev. The inflator always builds its own
+          # TBB 2019_U1 (the block in cmake/MicroDependencies.cmake is
+          # unconditional), and if apt's 2021.5 is also discoverable OpenVDB
+          # links that too -- two task schedulers in one process, which
+          # segfaults the moment inflation starts.
+          echo "--- TBB visible to CMake after install ---"
+          ls -l /usr/lib/x86_64-linux-gnu/libtbb* 2>/dev/null || echo "  none"
+          dpkg -l | grep -i tbb || echo "  no tbb packages" 
 
       - name: Fix CMake minimum version requirements
         working-directory: eFlesh/microstructure/microstructure_inflators
@@ -59,7 +66,7 @@ jobs:
             -DCMAKE_POLICY_DEFAULT_CMP0074=NEW \
             -DCMAKE_POLICY_DEFAULT_CMP0135=NEW \
             -DBoost_NO_SYSTEM_PATHS=OFF \
-            -DMICRO_WITH_TBB=OFF \
+            -DMICRO_WITH_TBB=ON \
             ..
 
       - name: Build cut_cells_cli
