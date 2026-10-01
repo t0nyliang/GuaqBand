@@ -1,0 +1,136 @@
+name: Generate raw lattice (cut_cells_cli)
+
+# Builds eFlesh's C++ inflater on Linux and runs generate_lattice_v10_5.py, then
+# uploads the INTERMEDIATE files as well as the final STL.
+#
+# The intermediate we actually want is output/forearm_lattice_raw_v10_5.obj --
+# the surface-conforming lattice before pouches and base. notebooks/week2 loads
+# it so Mac and Windows learners can reproduce the real part without building
+# any C++. Download the artifact, gzip the OBJ, and commit it to
+# notebooks/week2/data/ (see notebooks/week2/data/README.md).
+#
+# This only needs to be re-run if the lattice parameters in
+# generate_lattice_v10_5.py change (CELL_SIZE, NU, YOUNG_BY_K, GRID_SHIFT,
+# RESOLUTION, box dimensions).
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-generate:
+    runs-on: ubuntu-22.04
+    # The C++ build pulls and compiles OpenVDB, CGAL, libigl and nlopt on a
+    # 4-core runner. eFlesh's own ~1 hour estimate assumes 12 cores.
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            libgmp-dev \
+            libmpfr-dev \
+            libcgal-dev \
+            libeigen3-dev \
+            libsuitesparse-dev \
+            libboost-all-dev \
+            libtbb-dev \
+            python3 \
+            python3-pip
+
+      - name: Fix CMake minimum version requirements
+        working-directory: eFlesh/microstructure/microstructure_inflators
+        run: |
+          find . -name "CMakeLists.txt" -not -path "./build/*" -exec sed -i \
+            's/cmake_minimum_required(VERSION 3\.[1234])/cmake_minimum_required(VERSION 3.10)/g' {} \;
+
+      - name: Configure CMake
+        working-directory: eFlesh/microstructure/microstructure_inflators
+        run: |
+          mkdir -p build && cd build
+          cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_POLICY_VERSION_MINIMUM=3.1 \
+            -DCMAKE_POLICY_DEFAULT_CMP0074=NEW \
+            -DCMAKE_POLICY_DEFAULT_CMP0135=NEW \
+            -DBoost_NO_SYSTEM_PATHS=OFF \
+            -DMICRO_WITH_TBB=ON \
+            ..
+
+      - name: Build cut_cells_cli
+        working-directory: eFlesh/microstructure/microstructure_inflators/build
+        run: |
+          make -j$(nproc) cut_cells_cli
+          ls -lh isosurface_inflator/cut_cells_cli
+
+      - name: Locate TBB for the runtime linker
+        working-directory: eFlesh/microstructure/microstructure_inflators
+        run: |
+          TBB_SO=$(find build 3rdparty -name "libtbb.so*" 2>/dev/null | head -1)
+          if [ -n "$TBB_SO" ]; then
+            echo "TBB_LIB_DIR=$(dirname "$TBB_SO")" >> "$GITHUB_ENV"
+          else
+            echo "TBB_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> "$GITHUB_ENV"
+          fi
+
+      - name: Install Python dependencies
+        run: pip3 install meshio trimesh manifold3d numpy scipy rtree
+
+      - name: Run the v10_5 generator
+        working-directory: eFlesh
+        run: |
+          export LD_LIBRARY_PATH="${TBB_LIB_DIR}:${LD_LIBRARY_PATH:-}"
+          python3 generate_lattice_v10_5.py
+
+      - name: Report what was produced
+        working-directory: eFlesh
+        run: |
+          ls -lh shapes/ output/
+          python3 - <<'EOF'
+          import trimesh, numpy as np
+          raw = trimesh.load("output/forearm_lattice_raw_v10_5.obj", force="mesh")
+          print(f"RAW lattice : {len(raw.faces):,} triangles, watertight={raw.is_watertight}")
+          print(f"              bounds {np.round(raw.bounds, 3).tolist()}")
+          final = trimesh.load("output/lattice_v10_5.stl", force="mesh")
+          print(f"FINAL part  : {len(final.faces):,} triangles, "
+                f"bbox {np.round(final.bounding_box.extents, 2).tolist()}")
+          EOF
+
+      - name: Compare against the committed reference STL
+        working-directory: eFlesh
+        continue-on-error: true
+        run: |
+          python3 - <<'EOF'
+          import subprocess, trimesh, numpy as np
+          ref = subprocess.run(["git", "show", "HEAD:eFlesh/output/lattice_v10_5.stl"],
+                               capture_output=True, cwd="..").stdout
+          open("/tmp/ref.stl", "wb").write(ref)
+          a = trimesh.load("/tmp/ref.stl", force="mesh")
+          b = trimesh.load("output/lattice_v10_5.stl", force="mesh")
+          print(f"committed reference : {len(a.faces):,} triangles, volume {a.volume:,.1f} mm^3")
+          print(f"this run            : {len(b.faces):,} triangles, volume {b.volume:,.1f} mm^3")
+          print("MATCH" if len(a.faces) == len(b.faces) else "DIFFERENT -- inspect before committing")
+          EOF
+
+      - name: Compress the raw lattice for committing
+        working-directory: eFlesh
+        run: |
+          gzip -9 -k -c output/forearm_lattice_raw_v10_5.obj > forearm_lattice_raw_v10_5.obj.gz
+          ls -lh forearm_lattice_raw_v10_5.obj.gz
+
+      - name: Upload lattice files
+        uses: actions/upload-artifact@v4
+        with:
+          name: raw-lattice-v10-5
+          path: |
+            eFlesh/forearm_lattice_raw_v10_5.obj.gz
+            eFlesh/shapes/forearm_pad_box_v10_5.obj
+            eFlesh/output/lattice_v10_5.stl
+            eFlesh/output/slicer_settings_lattice_v10_5.txt
+          retention-days: 90
+          if-no-files-found: error

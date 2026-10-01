@@ -8,3 +8,4 @@ venv/
 profile.json
 recordings/
 calibration_pipeline/generated/sessions/
+notebooks/week2/output/
