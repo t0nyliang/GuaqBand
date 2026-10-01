@@ -39,16 +39,11 @@ jobs:
             libeigen3-dev \
             libsuitesparse-dev \
             libboost-all-dev \
+            libtbb-dev \
             python3 \
             python3-pip
-          # Deliberately NOT libtbb-dev. The inflator always builds its own
-          # TBB 2019_U1 (the block in cmake/MicroDependencies.cmake is
-          # unconditional), and if apt's 2021.5 is also discoverable OpenVDB
-          # links that too -- two task schedulers in one process, which
-          # segfaults the moment inflation starts.
-          echo "--- TBB visible to CMake after install ---"
-          ls -l /usr/lib/x86_64-linux-gnu/libtbb* 2>/dev/null || echo "  none"
-          dpkg -l | grep -i tbb || echo "  no tbb packages" 
+          echo "--- system TBB ---"
+          dpkg -s libtbb-dev 2>/dev/null | grep -E '^Version' || true
 
       - name: Fix CMake minimum version requirements
         working-directory: eFlesh/microstructure/microstructure_inflators
@@ -59,8 +54,21 @@ jobs:
       - name: Configure CMake
         working-directory: eFlesh/microstructure/microstructure_inflators
         run: |
+          # Define TBB::tbb from the system package before MicroDependencies.cmake
+          # runs, so its `if(NOT TARGET TBB::tbb)` is false and it does not build
+          # TBB 2019_U1. OpenVDB 10.0.2 needs >= 2020.2, and two TBB runtimes in
+          # one process segfault, so everything has to share apt's 2021.5.
+          {
+            echo "find_package(TBB REQUIRED)"
+            echo "if(NOT TARGET TBB::tbb)"
+            echo "  message(FATAL_ERROR \"week2: system TBB gave no TBB::tbb target\")"
+            echo "endif()"
+            echo "message(STATUS \"week2: using system TBB for every consumer\")"
+          } > "$PWD/use_system_tbb.cmake"
+          cat "$PWD/use_system_tbb.cmake"
           mkdir -p build && cd build
           cmake \
+            -DCMAKE_PROJECT_INCLUDE_BEFORE="$(cd .. && pwd)/use_system_tbb.cmake" \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_POLICY_VERSION_MINIMUM=3.1 \
             -DCMAKE_POLICY_DEFAULT_CMP0074=NEW \
