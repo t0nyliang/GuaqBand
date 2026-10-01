@@ -59,7 +59,7 @@ jobs:
             -DCMAKE_POLICY_DEFAULT_CMP0074=NEW \
             -DCMAKE_POLICY_DEFAULT_CMP0135=NEW \
             -DBoost_NO_SYSTEM_PATHS=OFF \
-            -DMICRO_WITH_TBB=ON \
+            -DMICRO_WITH_TBB=OFF \
             ..
 
       - name: Build cut_cells_cli
@@ -89,11 +89,31 @@ jobs:
         working-directory: eFlesh/microstructure/microstructure_inflators
         run: |
           export LD_LIBRARY_PATH="${TBB_LIB_DIR}:${LD_LIBRARY_PATH:-}"
-          echo "--- ldd ---"
-          ldd build/isosurface_inflator/cut_cells_cli | grep -Ei "tbb|not found" || true
-          echo "--- smoke test (must not segfault) ---"
-          ./build/isosurface_inflator/cut_cells_cli --help >/dev/null 2>&1
-          echo "exit: $?  (139 = SIGSEGV)"
+          BIN=build/isosurface_inflator/cut_cells_cli
+
+          echo "--- TBB libraries linked ---"
+          ldd "$BIN" | grep -Ei "tbb|not found" || echo "  (none)"
+
+          # Two TBB runtimes in one process = two task schedulers = segfault as
+          # soon as parallel work starts. --help returns before that, so this
+          # has to be caught structurally rather than by running the binary.
+          N=$(ldd "$BIN" | grep -c "libtbb\.so" || true)
+          echo "distinct libtbb sonames: $N"
+          if [ "$N" -gt 1 ]; then
+            echo "::error::cut_cells_cli links $N TBB runtimes; it will segfault."
+            exit 1
+          fi
+
+          echo "--- smoke test ---"
+          set +e
+          "./$BIN" --help >/dev/null 2>&1
+          RC=$?
+          set -e
+          echo "exit: $RC"
+          if [ "$RC" -ge 128 ]; then
+            echo "::error::cut_cells_cli died on signal $((RC - 128))."
+            exit 1
+          fi
 
       - name: Install Python dependencies
         run: pip3 install meshio trimesh manifold3d numpy scipy rtree
