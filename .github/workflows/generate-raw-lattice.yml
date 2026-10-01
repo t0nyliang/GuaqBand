@@ -71,12 +71,29 @@ jobs:
       - name: Locate TBB for the runtime linker
         working-directory: eFlesh/microstructure/microstructure_inflators
         run: |
-          TBB_SO=$(find build 3rdparty -name "libtbb.so*" 2>/dev/null | head -1)
+          # MUST be absolute. The generator runs from a different directory, so a
+          # relative path silently resolves to nothing and the loader falls back
+          # to the system libtbb (2021.x on 22.04). cut_cells_cli is linked
+          # against the 2019_U1 copy built here -- mixing the two segfaults.
+          TBB_SO=$(find "$PWD/build" "$PWD/3rdparty" -name "libtbb.so*" 2>/dev/null | head -1)
           if [ -n "$TBB_SO" ]; then
-            echo "TBB_LIB_DIR=$(dirname "$TBB_SO")" >> "$GITHUB_ENV"
+            TBB_LIB_DIR=$(cd "$(dirname "$TBB_SO")" && pwd)
           else
-            echo "TBB_LIB_DIR=/usr/lib/x86_64-linux-gnu" >> "$GITHUB_ENV"
+            TBB_LIB_DIR=/usr/lib/x86_64-linux-gnu
           fi
+          echo "TBB_LIB_DIR=$TBB_LIB_DIR" >> "$GITHUB_ENV"
+          echo "resolved TBB_LIB_DIR=$TBB_LIB_DIR"
+          ls -l "$TBB_LIB_DIR"/libtbb.so* 2>/dev/null || echo "  (no libtbb there)"
+
+      - name: Check what the binary actually links against
+        working-directory: eFlesh/microstructure/microstructure_inflators
+        run: |
+          export LD_LIBRARY_PATH="${TBB_LIB_DIR}:${LD_LIBRARY_PATH:-}"
+          echo "--- ldd ---"
+          ldd build/isosurface_inflator/cut_cells_cli | grep -Ei "tbb|not found" || true
+          echo "--- smoke test (must not segfault) ---"
+          ./build/isosurface_inflator/cut_cells_cli --help >/dev/null 2>&1
+          echo "exit: $?  (139 = SIGSEGV)"
 
       - name: Install Python dependencies
         run: pip3 install meshio trimesh manifold3d numpy scipy rtree
