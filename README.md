@@ -20,6 +20,10 @@ FRAME,sequence,device_us,s0x,s0y,s0z,s1x,s1y,s1z,s2x,s2y,s2z,s3x,s3y,s3z
 The mux reads are sequential, so the four measurements are grouped into one
 near-synchronous frame rather than captured at exactly the same instant.
 
+Picture of the GuaqBand on a forearm:
+<img width="2160" height="2880" alt="image" src="https://github.com/user-attachments/assets/940a4efa-e04d-4e30-89ec-c344605cf1a1" />
+
+
 ## First-time setup
 
 ### 1. Upload firmware
