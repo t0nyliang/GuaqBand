@@ -9,3 +9,6 @@ profile.json
 recordings/
 calibration_pipeline/generated/sessions/
 notebooks/week2/output/
+
+# PlatformIO build output
+.pio/
