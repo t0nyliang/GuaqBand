@@ -1,0 +1,19 @@
+{
+  "name": "guaqband-signals-workshop",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "slidev slides.md",
+    "build": "slidev build slides.md",
+    "export": "slidev export slides.md --output guaqband-signals.pdf --wait 3000 --wait-until networkidle --timeout 60000",
+    "export:png": "slidev export slides.md --format png --output rendered-slides"
+  },
+  "engines": {
+    "node": ">=24.11.0"
+  },
+  "devDependencies": {
+    "@slidev/cli": "53.0.0",
+    "@slidev/theme-default": "0.25.0",
+    "playwright-chromium": "1.56.1"
+  }
+}

@@ -17,3 +17,7 @@ python3 -m jupyter lab signals_basics_coding_challenges.ipynb
 ```
 
 On Windows, replace `python3` with `python` in the commands above. Jupyter opens the notebook in your browser. Run cells from top to bottom. Complete the functions marked `TODO`, then rerun their checks and plots.
+
+## This week: preprocessing and KNN
+
+Use the [student lab and setup instructions](preprocessing/README.md). The notebook includes 40 synthetic trials, four blank implementation exercises, and plots. No hardware is required. See the [slides PDF](slides/guaqband-signals.pdf) for the lecture.

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 290" font-family="Arial" font-size="17">
+<rect width="900" height="290" fill="white"/>
+<path d="M65 30V245H550" fill="none" stroke="#475569" stroke-width="2"/>
+<text x="225" y="278">Standardized feature A</text>
+<text x="15" y="165" transform="rotate(-90 15 165)">Feature B</text>
+<g stroke="#94a3b8" stroke-dasharray="5 5"><path d="M290 150L260 135M290 150L315 173M290 150L325 125"/></g>
+<g fill="#f97316"><circle cx="260" cy="135" r="8"/><circle cx="315" cy="173" r="8"/><circle cx="440" cy="210" r="8"/></g>
+<g fill="#64748b"><circle cx="325" cy="125" r="8"/><circle cx="455" cy="70" r="8"/><circle cx="480" cy="130" r="8"/></g>
+<g fill="#16a34a"><circle cx="130" cy="65" r="8"/><circle cx="165" cy="90" r="8"/><circle cx="130" cy="185" r="8"/></g>
+<g fill="none" stroke="#0f172a" stroke-width="2"><circle cx="260" cy="135" r="15"/><circle cx="315" cy="173" r="15"/><circle cx="325" cy="125" r="15"/></g>
+<path d="M290 138L293 146L302 146L295 152L298 161L290 155L282 161L285 152L278 146L287 146Z" fill="#0f172a"/>
+<text x="237" y="111">query</text>
+<text x="610" y="65" font-weight="bold">Three nearest: 2 fist, 1 rest</text>
+<circle cx="620" cy="107" r="8" fill="#f97316"/><text x="640" y="113">fist</text>
+<circle cx="620" cy="145" r="8" fill="#64748b"/><text x="640" y="151">rest</text>
+<circle cx="620" cy="183" r="8" fill="#16a34a"/><text x="640" y="189">spread</text>
+<text x="610" y="240" font-weight="bold">Prediction: fist</text>
+</svg>
