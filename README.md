@@ -8,8 +8,8 @@ recognizes `rest`, `wrist_up`, `spread`, and `fist`. The first-run path is:
 3. Run guided calibration for the person wearing the armband.
 4. Start live detection or the monitoring dashboard.
 
-Four MLX90393 sensors connect to an ESP32 through PCA9548 channels 0, 2, 5, and
-7. Because each sensor is isolated by the mux, all four can use their default
+Four MLX90393 sensors connect to an ESP32 through PCA9548 channels 0, 1, 2, and
+3. Because each sensor is isolated by the mux, all four can use their default
 I2C address of `0x18`. The firmware reads them in that channel order and emits
 one timestamped frame at a target rate of 50 Hz:
 

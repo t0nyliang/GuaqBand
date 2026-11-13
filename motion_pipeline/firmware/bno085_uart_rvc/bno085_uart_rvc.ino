@@ -2,7 +2,7 @@
 //
 // MLX90393 wiring:
 //   ESP32 GPIO21 -> SDA, GPIO22 -> SCL, both to PCA9548 (STEMMA QT).
-//   MLX90393 sensors are on mux channels 0, 2, 5, and 7 at address 0x18.
+//   MLX90393 sensors are on mux channels 0, 1, 2, and 3 at address 0x18.
 //
 // BNO085 wiring (UART-RVC mode):
 //   BNO085 VIN -> ESP32 3V3
@@ -27,7 +27,7 @@ constexpr uint8_t SDA_PIN = 21;
 constexpr uint8_t SCL_PIN = 22;
 constexpr uint8_t MLX90393_ADDR = 0x18;
 constexpr uint8_t SENSOR_COUNT = 4;
-constexpr uint8_t MUX_CHANNELS[SENSOR_COUNT] = {0, 2, 5, 7};
+constexpr uint8_t MUX_CHANNELS[SENSOR_COUNT] = {0, 1, 2, 3};
 constexpr int8_t BNO_RX_PIN = 4;
 constexpr int8_t BNO_TX_PIN = -1;  // UART-RVC is output-only for this pipeline.
 constexpr uint32_t SERIAL_BAUD = 115200;
@@ -189,7 +189,7 @@ void setup() {
   Serial.print(MLX90393_ADDR, HEX);
   Serial.print(F(",sensor_count="));
   Serial.print(SENSOR_COUNT);
-  Serial.print(F(",mux_channels=0|2|5|7,rate_hz="));
+  Serial.print(F(",mux_channels=0|1|2|3,rate_hz="));
   Serial.print(SAMPLE_RATE_HZ);
   Serial.println(F(",filter=3,oversampling=1,resolution_bits=16,unit=uT"));
 

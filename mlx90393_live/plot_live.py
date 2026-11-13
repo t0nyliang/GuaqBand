@@ -24,7 +24,7 @@ import matplotlib.animation as animation
 
 
 SENSOR_COUNT = 4
-MUX_CHANNELS = (0, 2, 5, 7)
+MUX_CHANNELS = (0, 1, 2, 3)
 AXIS_COUNT = 3
 FRAME_FIELD_COUNT = 3 + SENSOR_COUNT * AXIS_COUNT
 UINT32_MASK = 0xFFFFFFFF

@@ -1,6 +1,6 @@
 // Timestamped four-sensor MLX90393 readout through the PCA9548 I2C mux.
 // Wiring: ESP32 GPIO21 -> SDA, GPIO22 -> SCL, both to PCA9548 (STEMMA QT).
-// MLX90393 sensors are on mux channels 0, 2, 5, and 7, each at address 0x18.
+// MLX90393 sensors are on mux channels 0, 1, 2, and 3, each at address 0x18.
 // Packet:
 // FRAME,sequence,device_us,s0x,s0y,s0z,...,s3x,s3y,s3z
 
@@ -13,7 +13,7 @@ constexpr uint8_t SDA_PIN = 21;
 constexpr uint8_t SCL_PIN = 22;
 constexpr uint8_t MLX90393_ADDR = 0x18;
 constexpr uint8_t SENSOR_COUNT = 4;
-constexpr uint8_t MUX_CHANNELS[SENSOR_COUNT] = {0, 2, 5, 7};
+constexpr uint8_t MUX_CHANNELS[SENSOR_COUNT] = {0, 1, 2, 3};
 constexpr uint32_t SERIAL_BAUD = 115200;
 constexpr uint32_t SAMPLE_RATE_HZ = 50;
 constexpr uint32_t SAMPLE_PERIOD_US = 1000000UL / SAMPLE_RATE_HZ;
@@ -116,7 +116,7 @@ void setup() {
   Serial.print(MLX90393_ADDR, HEX);
   Serial.print(F(",sensor_count="));
   Serial.print(SENSOR_COUNT);
-  Serial.print(F(",mux_channels=0|2|5|7,rate_hz="));
+  Serial.print(F(",mux_channels=0|1|2|3,rate_hz="));
   Serial.print(SAMPLE_RATE_HZ);
   Serial.println(F(",filter=3,oversampling=1,resolution_bits=16,unit=uT"));
   nextSampleUs = micros();
